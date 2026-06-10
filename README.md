@@ -2,16 +2,15 @@
 
 A centralized archive for National Textile University past exam papers.
 
-## Live Site
-https://studynest-git-main-quantumsolutionspk.vercel.app
+## Live URLs
+- Papers: /papers
+- Contribute: /contribute  
+- Leaderboard: /leaderboard
+- Admin: /login
 
-## Pages
-- `/papers` - Browse & filter all past papers
-- `/contribute` - Submit a paper using your roll number
-- `/leaderboard` - Top contributors
-- `/login` - Admin login
-
-## Tech Stack
+## Stack
 - Next.js 14, TypeScript, Tailwind CSS
 - Supabase (PostgreSQL + Storage + Auth)
-- Vercel
+- Deployed on Vercel
+
+## Build fixed: removed @supabase/ssr, uuid, shadcn dependencies
