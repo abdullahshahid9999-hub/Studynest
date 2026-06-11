@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -13,43 +12,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [debug, setDebug] = useState('');
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setDebug('Attempting login...');
 
-    try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
-      });
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: password.trim(),
+    });
 
-      setDebug('Response received: ' + JSON.stringify({ 
-        hasSession: !!data?.session, 
-        hasUser: !!data?.user,
-        error: authError?.message 
-      }));
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
 
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data?.session) {
-        setDebug('Login success! Redirecting...');
-        window.location.href = '/admin';
-      } else {
-        setError('No session returned. Check email confirmation in Supabase.');
-        setLoading(false);
-      }
-    } catch (err: any) {
-      setError('Network error: ' + err.message);
-      setDebug('Exception: ' + err.message);
+    if (data?.session) {
+      // Hard redirect - bypass Next.js router completely
+      window.location.replace('/admin');
+    } else {
+      setError('Login failed. Please try again.');
       setLoading(false);
     }
   };
@@ -62,7 +46,7 @@ export default function LoginPage() {
     }}>
       <div style={{
         background: 'white', borderRadius: '16px', padding: '48px 40px',
-        width: '100%', maxWidth: '440px', boxShadow: '0 25px 50px rgba(0,0,0,0.4)'
+        width: '100%', maxWidth: '420px', boxShadow: '0 25px 50px rgba(0,0,0,0.4)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{ fontSize: '48px', marginBottom: '12px' }}>📚</div>
@@ -73,14 +57,13 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email"
               style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              autoComplete="current-password"
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password"
               style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' as const }} />
           </div>
 
@@ -90,17 +73,15 @@ export default function LoginPage() {
             </div>
           )}
 
-          {debug && (
-            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '10px', marginBottom: '16px', color: '#166534', fontSize: '11px', fontFamily: 'monospace', wordBreak: 'break-all' as const }}>
-              {debug}
-            </div>
-          )}
-
           <button type="submit" disabled={loading}
             style={{ width: '100%', padding: '13px', background: loading ? '#94a3b8' : '#1d4ed8', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer' }}>
-            {loading ? '⏳ Signing in...' : '🔐 Sign In'}
+            {loading ? '⏳ Redirecting to portal...' : '🔐 Sign In'}
           </button>
         </form>
+
+        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: '#94a3b8' }}>
+          Admin access only · NTU Past Papers Archive
+        </p>
       </div>
     </div>
   );
