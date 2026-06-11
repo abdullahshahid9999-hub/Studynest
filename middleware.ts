@@ -2,19 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  // Only protect /admin routes
   if (!pathname.startsWith('/admin')) return NextResponse.next();
   if (pathname === '/login') return NextResponse.next();
 
-  // Check for Supabase auth cookies
-  const hasAuth = request.cookies.getAll().some(c => 
-    c.name.includes('supabase') || c.name.includes('sb-')
+  // Check for any supabase auth cookie
+  const cookies = request.cookies.getAll();
+  const hasAuth = cookies.some(c => 
+    c.name.startsWith('sb-') || 
+    c.name.includes('supabase') ||
+    c.name.includes('auth-token')
   );
 
   if (!hasAuth) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/login', request.url));
   }
+  
   return NextResponse.next();
 }
 
