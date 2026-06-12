@@ -24,24 +24,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const navItems = [
-    ['🏠', 'Dashboard', '/admin'],
-    ['🏫', 'Departments', '/admin/departments'],
-    ['👤', 'Teachers', '/admin/teachers'],
-    ['📖', 'Subjects', '/admin/subjects'],
-    ['⏳', 'Pending', '/admin/pending'],
-    ['✅', 'Approved', '/admin/approved'],
-    ['❌', 'Rejected', '/admin/rejected'],
+    ['🏠', 'Dashboard',    '/admin'],
+    ['🏫', 'Departments',  '/admin/departments'],
+    ['👤', 'Teachers',     '/admin/teachers'],
+    ['📖', 'Subjects',     '/admin/subjects'],
+    ['⏳', 'Pending',      '/admin/pending'],
+    ['✅', 'Approved',     '/admin/approved'],
+    ['❌', 'Rejected',     '/admin/rejected'],
     ['👥', 'Contributors', '/admin/contributors'],
-    ['🏆', 'Leaderboard', '/admin/leaderboard'],
+    ['🏆', 'Leaderboard',  '/admin/leaderboard'],
   ];
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       <aside style={{ width: '230px', background: '#0f172a', color: 'white', display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 50 }}>
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #1e293b' }}>
-          <div style={{ fontSize: '24px', marginBottom: '6px' }}>📚</div>
-          <h1 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0, color: 'white' }}>NTU Archive</h1>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '3px 0 0' }}>Admin Panel</p>
+          <h1 style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 2px', color: 'white' }}>NTU Archive</h1>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>Admin Panel</p>
         </div>
         <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto' }}>
           {navItems.map(([icon, label, href]) => {
@@ -62,11 +61,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <a href="/papers" style={{ display: 'block', color: '#64748b', fontSize: '12px', textDecoration: 'none', marginBottom: '10px' }}>← Public Site</a>
           <button onClick={handleSignOut}
             style={{ background: 'none', border: '1px solid #334155', color: '#94a3b8', padding: '7px 14px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', width: '100%' }}>
-            🚪 Sign Out
+            Sign Out
           </button>
         </div>
       </aside>
-      <main style={{ flex: 1, marginLeft: '230px', padding: '32px', background: '#f8fafc', minHeight: '100vh', overflowY: 'auto' }}>
+      <main style={{ flex: 1, marginLeft: '230px', padding: '32px', background: '#f8fafc', minHeight: '100vh' }}>
         {children}
       </main>
     </div>
