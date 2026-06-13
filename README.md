@@ -1,2 +1,2 @@
 # NTU Past Papers
-File URL fix deployed.
+Signed URL fix - papers now viewable.
