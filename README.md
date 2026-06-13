@@ -1,3 +1,2 @@
-# StudyNest - NTU Past Papers Archive
-
-Full UI redesign complete.
+# NTU Past Papers Archive
+Clean minimal UI.
