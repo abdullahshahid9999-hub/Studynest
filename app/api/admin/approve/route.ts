@@ -1,72 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { adminApproveSchema, adminRejectSchema } from '@/lib/validations/schemas';
+
+const SUPABASE_URL = 'https://dvtkcuqwvkakycsseydh.supabase.co';
+const SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2dGtjdXF3dmtha3ljc3NleWRoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTA3NzA4NywiZXhwIjoyMDk2NjUzMDg3fQ.PQjFQe3RfawULpWVa9jBPAKi4ND2AiRb1ChWgIO6O3Q';
 
 function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+  return createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 }
 
-async function getAuthenticatedAdmin(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const token = authHeader.slice(7);
-  const supabase = getAdminClient();
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
+async function getAdmin(request: NextRequest) {
+  const auth = request.headers.get('authorization');
+  if (!auth?.startsWith('Bearer ')) return null;
+  const sb = getAdminClient();
+  const { data: { user } } = await sb.auth.getUser(auth.slice(7));
   return user;
 }
 
 export async function POST(request: NextRequest) {
-  const admin = await getAuthenticatedAdmin(request);
+  const admin = await getAdmin(request);
   if (!admin) return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
 
-  const body = await request.json();
-  const parsed = adminApproveSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ success: false, error: parsed.error.errors[0].message }, { status: 422 });
+  const { paper_id, admin_note } = await request.json();
+  if (!paper_id) return NextResponse.json({ success: false, error: 'paper_id required.' }, { status: 400 });
 
-  const supabase = getAdminClient();
-  const { data: paper } = await supabase.from('papers').select('id, file_path, file_type, status').eq('id', parsed.data.paper_id).single();
+  const sb = getAdminClient();
+
+  const { data: paper } = await sb.from('papers').select('id,file_path,status').eq('id', paper_id).single();
   if (!paper) return NextResponse.json({ success: false, error: 'Paper not found.' }, { status: 404 });
   if (paper.status !== 'Pending') return NextResponse.json({ success: false, error: 'Only pending papers can be approved.' }, { status: 409 });
 
-  const newPath = paper.file_path.replace('pending/', 'approved/');
-  const { error: moveErr } = await supabase.storage.from('papers').move(paper.file_path, newPath);
-  if (moveErr) {
-    // If move fails, approve anyway with original path
-    console.error('Storage move error:', moveErr);
+  // Move file from pending/ to approved/
+  const newPath = paper.file_path.startsWith('pending/')
+    ? paper.file_path.replace('pending/', 'approved/')
+    : paper.file_path;
+
+  if (paper.file_path !== newPath) {
+    await sb.storage.from('papers').move(paper.file_path, newPath);
   }
 
-  const { data: urlData } = supabase.storage.from('papers').getPublicUrl(moveErr ? paper.file_path : newPath);
+  // Always use direct public storage URL
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/papers/${newPath}`;
 
-  await supabase.from('papers').update({
+  const { error } = await sb.from('papers').update({
     status: 'Approved',
-    file_path: moveErr ? paper.file_path : newPath,
-    file_url: urlData?.publicUrl ?? null,
-    admin_note: parsed.data.admin_note ?? null,
+    file_path: newPath,
+    file_url: publicUrl,
+    admin_note: admin_note ?? null,
     reviewed_by: admin.id,
     reviewed_at: new Date().toISOString(),
-  }).eq('id', parsed.data.paper_id);
+  }).eq('id', paper_id);
 
-  return NextResponse.json({ success: true, message: 'Paper approved successfully.' });
+  if (error) return NextResponse.json({ success: false, error: 'Update failed.' }, { status: 500 });
+  return NextResponse.json({ success: true, message: 'Paper approved.' });
 }
 
 export async function PATCH(request: NextRequest) {
-  const admin = await getAuthenticatedAdmin(request);
+  const admin = await getAdmin(request);
   if (!admin) return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
 
-  const body = await request.json();
-  const parsed = adminRejectSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ success: false, error: parsed.error.errors[0].message }, { status: 422 });
+  const { paper_id, admin_note } = await request.json();
+  if (!paper_id || !admin_note?.trim()) {
+    return NextResponse.json({ success: false, error: 'paper_id and reason required.' }, { status: 400 });
+  }
 
-  const supabase = getAdminClient();
-  await supabase.from('papers').update({
-    status: 'Rejected', admin_note: parsed.data.admin_note,
-    reviewed_by: admin.id, reviewed_at: new Date().toISOString(),
-  }).eq('id', parsed.data.paper_id).eq('status', 'Pending');
+  const sb = getAdminClient();
+  await sb.from('papers').update({
+    status: 'Rejected',
+    admin_note,
+    reviewed_by: admin.id,
+    reviewed_at: new Date().toISOString(),
+  }).eq('id', paper_id).eq('status', 'Pending');
 
   return NextResponse.json({ success: true, message: 'Paper rejected.' });
 }
