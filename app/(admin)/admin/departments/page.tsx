@@ -9,92 +9,113 @@ export default function DepartmentsPage() {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [editId, setEditId] = useState<string|null>(null);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState({ text: '', ok: true });
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
     const { data } = await sb.from('departments').select('*').order('name');
     setDepts(data ?? []);
   };
-
   useEffect(() => { load(); }, []);
 
+  const flash = (text: string, ok = true) => {
+    setMsg({ text, ok });
+    setTimeout(() => setMsg({ text: '', ok: true }), 2500);
+  };
+
   const save = async () => {
-    if (!name.trim() || !code.trim()) { setMsg('Name and code required.'); return; }
+    if (!name.trim() || !code.trim()) { flash('Name and code required.', false); return; }
     setLoading(true);
     if (editId) {
-      await sb.from('departments').update({ name: name.trim(), code: code.trim().toUpperCase() }).eq('id', editId);
-      setMsg('Updated!');
+      const { error } = await sb.from('departments').update({ name: name.trim(), code: code.trim().toUpperCase() }).eq('id', editId);
+      if (error) { flash(error.message, false); } else { flash('Updated!'); setName(''); setCode(''); setEditId(null); await load(); }
     } else {
       const { error } = await sb.from('departments').insert({ name: name.trim(), code: code.trim().toUpperCase() });
-      if (error) { setMsg('Error: ' + error.message); setLoading(false); return; }
-      setMsg('Added!');
+      if (error) { flash(error.message, false); } else { flash('Added!'); setName(''); setCode(''); await load(); }
     }
-    setName(''); setCode(''); setEditId(null);
-    await load(); setLoading(false);
-    setTimeout(() => setMsg(''), 2000);
+    setLoading(false);
   };
 
   const del = async (id: string) => {
-    if (!confirm('Delete this department?')) return;
-    await sb.from('departments').delete().eq('id', id);
-    await load();
+    if (!confirm('Delete this department? This may fail if teachers are linked.')) return;
+    const { error } = await sb.from('departments').delete().eq('id', id);
+    if (error) flash('Cannot delete — teachers are linked to this department.', false);
+    else { flash('Deleted.'); await load(); }
   };
 
-  const edit = (d: any) => { setEditId(d.id); setName(d.name); setCode(d.code); };
-
-  const inp = { padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', width: '100%', boxSizing: 'border-box' as const };
+  const inp: React.CSSProperties = { padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14, width: '100%', boxSizing: 'border-box', outline: 'none', color: '#111' };
 
   return (
-    <div style={{ maxWidth: '800px' }}>
-      <h1 style={{ fontSize: '1.6rem', fontWeight: 'bold', marginBottom: '24px' }}>Departments</h1>
+    <div style={{ maxWidth: 800 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111', marginBottom: 24 }}>Departments</h1>
 
-      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '16px' }}>{editId ? 'Edit Department' : 'Add Department'}</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+      {/* Form */}
+      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: '#333', marginBottom: 14 }}>
+          {editId ? 'Edit Department' : 'Add Department'}
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 12 }}>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Department Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Computer Science" style={inp} />
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>Department Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Computer Science" style={inp}
+              onFocus={e => (e.target.style.borderColor = '#111')} onBlur={e => (e.target.style.borderColor = '#e0e0e0')} />
           </div>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Code</label>
-            <input value={code} onChange={e => setCode(e.target.value)} placeholder="e.g. CS" style={inp} />
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>Code *</label>
+            <input value={code} onChange={e => setCode(e.target.value)} placeholder="CS" style={inp}
+              onFocus={e => (e.target.style.borderColor = '#111')} onBlur={e => (e.target.style.borderColor = '#e0e0e0')} />
           </div>
         </div>
-        {msg && <p style={{ color: msg.startsWith('Error') ? '#dc2626' : '#16a34a', fontSize: '13px', marginBottom: '8px' }}>{msg}</p>}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        {msg.text && <p style={{ fontSize: 13, color: msg.ok ? '#059669' : '#dc2626', marginBottom: 10 }}>{msg.text}</p>}
+        <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={save} disabled={loading}
-            style={{ padding: '8px 20px', background: '#1d4ed8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-            {loading ? 'Saving...' : editId ? 'Update' : 'Add Department'}
+            style={{ padding: '8px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            {loading ? 'Saving…' : editId ? 'Update' : 'Add'}
           </button>
-          {editId && <button onClick={() => { setEditId(null); setName(''); setCode(''); }}
-            style={{ padding: '8px 16px', background: 'white', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>Cancel</button>}
+          {editId && (
+            <button onClick={() => { setEditId(null); setName(''); setCode(''); }}
+              style={{ padding: '8px 14px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#555' }}>
+              Cancel
+            </button>
+          )}
         </div>
       </div>
 
-      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+      {/* Table */}
+      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Name</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Code</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Status</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Actions</th>
+            <tr style={{ background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+              {['Name','Code','Status','Actions'].map(h => (
+                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {depts.map((d, i) => (
-              <tr key={d.id} style={{ borderBottom: i < depts.length-1 ? '1px solid #f3f4f6' : 'none' }}>
-                <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '500' }}>{d.name}</td>
-                <td style={{ padding: '12px 16px' }}><span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>{d.code}</span></td>
-                <td style={{ padding: '12px 16px' }}><span style={{ color: d.is_active ? '#16a34a' : '#dc2626', fontSize: '13px' }}>{d.is_active ? 'Active' : 'Inactive'}</span></td>
-                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                  <button onClick={() => edit(d)} style={{ marginRight: '8px', padding: '5px 12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '5px', cursor: 'pointer', fontSize: '13px' }}>Edit</button>
-                  <button onClick={() => del(d.id)} style={{ padding: '5px 12px', background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '5px', cursor: 'pointer', fontSize: '13px' }}>Delete</button>
+              <tr key={d.id} style={{ borderBottom: i < depts.length-1 ? '1px solid #f5f5f5' : 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <td style={{ padding: '12px 16px', fontWeight: 500, fontSize: 14 }}>{d.name}</td>
+                <td style={{ padding: '12px 16px' }}>
+                  <span style={{ background: '#f0f4ff', color: '#3b5bdb', padding: '2px 9px', borderRadius: 5, fontSize: 12, fontWeight: 700 }}>{d.code}</span>
+                </td>
+                <td style={{ padding: '12px 16px' }}>
+                  <span style={{ fontSize: 12, color: d.is_active ? '#059669' : '#dc2626', fontWeight: 500 }}>
+                    {d.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td style={{ padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => { setEditId(d.id); setName(d.name); setCode(d.code); }}
+                      style={{ padding: '5px 12px', background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 500 }}>Edit</button>
+                    <button onClick={() => del(d.id)}
+                      style={{ padding: '5px 12px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 500 }}>Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
-            {depts.length === 0 && <tr><td colSpan={4} style={{ padding: '32px', textAlign: 'center', color: '#9ca3af' }}>No departments yet.</td></tr>}
+            {depts.length === 0 && <tr><td colSpan={4} style={{ padding: '32px', textAlign: 'center', color: '#aaa', fontSize: 14 }}>No departments yet.</td></tr>}
           </tbody>
         </table>
       </div>
