@@ -8,12 +8,13 @@ export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [name, setName] = useState('');
-  const [courseCode, setCourseCode] = useState('');
+  const [code, setCode] = useState('');
   const [teacherId, setTeacherId] = useState('');
   const [credits, setCredits] = useState('');
   const [editId, setEditId] = useState<string|null>(null);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState({ text: '', ok: true });
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     const [{ data: s }, { data: t }] = await Promise.all([
@@ -22,98 +23,116 @@ export default function SubjectsPage() {
     ]);
     setSubjects(s ?? []); setTeachers(t ?? []);
   };
-
   useEffect(() => { load(); }, []);
 
+  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg({ text: '', ok: true }), 2500); };
+
   const save = async () => {
-    if (!name.trim() || !courseCode.trim() || !teacherId) { setMsg('All required fields must be filled.'); return; }
+    if (!name.trim() || !code.trim() || !teacherId) { flash('All required fields needed.', false); return; }
     setLoading(true);
-    const payload = { name: name.trim(), course_code: courseCode.trim().toUpperCase(), teacher_id: teacherId, credits: credits ? parseInt(credits) : null };
+    const payload = { name: name.trim(), course_code: code.trim().toUpperCase(), teacher_id: teacherId, credits: credits ? parseInt(credits) : null };
     if (editId) {
-      await sb.from('subjects').update(payload).eq('id', editId);
-      setMsg('Updated!');
+      const { error } = await sb.from('subjects').update(payload).eq('id', editId);
+      if (error) flash(error.message, false); else { flash('Updated!'); setName(''); setCode(''); setTeacherId(''); setCredits(''); setEditId(null); await load(); }
     } else {
       const { error } = await sb.from('subjects').insert(payload);
-      if (error) { setMsg('Error: ' + error.message); setLoading(false); return; }
-      setMsg('Added!');
+      if (error) flash(error.message, false); else { flash('Added!'); setName(''); setCode(''); setTeacherId(''); setCredits(''); await load(); }
     }
-    setName(''); setCourseCode(''); setTeacherId(''); setCredits(''); setEditId(null);
-    await load(); setLoading(false);
-    setTimeout(() => setMsg(''), 2000);
+    setLoading(false);
   };
 
   const del = async (id: string) => {
-    if (!confirm('Delete this subject?')) return;
-    await sb.from('subjects').delete().eq('id', id);
-    await load();
+    if (!confirm('Delete subject?')) return;
+    const { error } = await sb.from('subjects').delete().eq('id', id);
+    if (error) flash('Cannot delete — papers are linked.', false); else { flash('Deleted.'); await load(); }
   };
 
-  const edit = (s: any) => { setEditId(s.id); setName(s.name); setCourseCode(s.course_code); setTeacherId(s.teacher_id); setCredits(s.credits?.toString() ?? ''); };
-  const inp = { padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', width: '100%', boxSizing: 'border-box' as const };
+  const inp: React.CSSProperties = { padding: '9px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14, width: '100%', boxSizing: 'border-box', outline: 'none', color: '#111' };
+  const filtered = subjects.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    s.course_code.toLowerCase().includes(search.toLowerCase()) ||
+    s.teachers?.name?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div style={{ maxWidth: '1000px' }}>
-      <h1 style={{ fontSize: '1.6rem', fontWeight: 'bold', marginBottom: '24px' }}>Subjects</h1>
+    <div style={{ maxWidth: 1000 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111', marginBottom: 24 }}>Subjects</h1>
 
-      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '16px' }}>{editId ? 'Edit Subject' : 'Add Subject'}</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 1fr', gap: '12px', marginBottom: '12px' }}>
+      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: '#333', marginBottom: 14 }}>{editId ? 'Edit Subject' : 'Add Subject'}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 0.5fr', gap: 12, marginBottom: 12 }}>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Subject Name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Data Structures" style={inp} />
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>Subject Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Data Structures" style={inp}
+              onFocus={e => (e.target.style.borderColor = '#111')} onBlur={e => (e.target.style.borderColor = '#e0e0e0')} />
           </div>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Course Code *</label>
-            <input value={courseCode} onChange={e => setCourseCode(e.target.value)} placeholder="CS201" style={inp} />
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>Course Code *</label>
+            <input value={code} onChange={e => setCode(e.target.value)} placeholder="CS201" style={inp}
+              onFocus={e => (e.target.style.borderColor = '#111')} onBlur={e => (e.target.style.borderColor = '#e0e0e0')} />
           </div>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Teacher *</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>Teacher *</label>
             <select value={teacherId} onChange={e => setTeacherId(e.target.value)} style={inp}>
-              <option value="">Select Teacher</option>
+              <option value="">Select teacher</option>
               {teachers.map(t => <option key={t.id} value={t.id}>[{(t.departments as any)?.code}] {t.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Credits</label>
-            <input value={credits} onChange={e => setCredits(e.target.value)} placeholder="3" type="number" min="1" max="6" style={inp} />
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>Credits</label>
+            <input value={credits} onChange={e => setCredits(e.target.value)} placeholder="3" type="number" min="1" max="6" style={inp}
+              onFocus={e => (e.target.style.borderColor = '#111')} onBlur={e => (e.target.style.borderColor = '#e0e0e0')} />
           </div>
         </div>
-        {msg && <p style={{ color: msg.startsWith('Error') ? '#dc2626' : '#16a34a', fontSize: '13px', marginBottom: '8px' }}>{msg}</p>}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={save} disabled={loading}
-            style={{ padding: '8px 20px', background: '#1d4ed8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-            {loading ? 'Saving...' : editId ? 'Update' : 'Add Subject'}
+        {msg.text && <p style={{ fontSize: 13, color: msg.ok ? '#059669' : '#dc2626', marginBottom: 10 }}>{msg.text}</p>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={save} disabled={loading} style={{ padding: '8px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            {loading ? 'Saving…' : editId ? 'Update' : 'Add'}
           </button>
-          {editId && <button onClick={() => { setEditId(null); setName(''); setCourseCode(''); setTeacherId(''); setCredits(''); }}
-            style={{ padding: '8px 16px', background: 'white', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>Cancel</button>}
+          {editId && <button onClick={() => { setEditId(null); setName(''); setCode(''); setTeacherId(''); setCredits(''); }}
+            style={{ padding: '8px 14px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>Cancel</button>}
         </div>
       </div>
 
-      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>{filtered.length} subjects</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, code, teacher…"
+            style={{ padding: '6px 12px', border: '1px solid #e0e0e0', borderRadius: 7, fontSize: 13, outline: 'none', width: 220 }} />
+        </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Subject</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Code</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Teacher</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Credits</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>Actions</th>
+            <tr style={{ background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+              {['Subject','Code','Teacher','Credits','Actions'].map(h => (
+                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {subjects.map((s, i) => (
-              <tr key={s.id} style={{ borderBottom: i < subjects.length-1 ? '1px solid #f3f4f6' : 'none' }}>
-                <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '500' }}>{s.name}</td>
-                <td style={{ padding: '12px 16px' }}><span style={{ background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>{s.course_code}</span></td>
-                <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{s.teachers?.name}</td>
-                <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6b7280' }}>{s.credits || '—'}</td>
-                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                  <button onClick={() => edit(s)} style={{ marginRight: '8px', padding: '5px 12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '5px', cursor: 'pointer', fontSize: '13px' }}>Edit</button>
-                  <button onClick={() => del(s.id)} style={{ padding: '5px 12px', background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '5px', cursor: 'pointer', fontSize: '13px' }}>Delete</button>
+            {filtered.map((s, i) => (
+              <tr key={s.id} style={{ borderBottom: i < filtered.length-1 ? '1px solid #f5f5f5' : 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <td style={{ padding: '12px 16px', fontWeight: 500, fontSize: 14 }}>{s.name}</td>
+                <td style={{ padding: '12px 16px' }}>
+                  <span style={{ background: '#f0fdf4', color: '#166534', padding: '2px 9px', borderRadius: 5, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>{s.course_code}</span>
+                </td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: '#555' }}>
+                  <span style={{ background: '#f0f4ff', color: '#3b5bdb', padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 700, marginRight: 6 }}>{(s.teachers as any)?.departments?.code}</span>
+                  {s.teachers?.name}
+                </td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: '#777' }}>{s.credits ?? '—'}</td>
+                <td style={{ padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => { setEditId(s.id); setName(s.name); setCode(s.course_code); setTeacherId(s.teacher_id); setCredits(s.credits?.toString() ?? ''); }}
+                      style={{ padding: '5px 12px', background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 500 }}>Edit</button>
+                    <button onClick={() => del(s.id)}
+                      style={{ padding: '5px 12px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 500 }}>Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
-            {subjects.length === 0 && <tr><td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#9ca3af' }}>No subjects yet. Add teachers first.</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#aaa', fontSize: 14 }}>No subjects yet.</td></tr>}
           </tbody>
         </table>
       </div>
