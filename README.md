@@ -1,2 +1,2 @@
 # NTU Past Papers
-Signed URL fix - papers now viewable.
+All admin pages clean and complete.
