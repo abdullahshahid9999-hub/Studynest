@@ -7,7 +7,7 @@ const sb = createClient('https://dvtkcuqwvkakycsseydh.supabase.co', 'eyJhbGciOiJ
 interface LinkRow { label: string; url: string; }
 
 const EMPTY = {
-  name: '', role: '', info: '', quote: '',
+  name: '', role: 'Admin', info: '', quote: '',
   avatar_url: '', linkedin_url: '', github_url: '',
   links: [] as LinkRow[], display_order: 0, is_active: true,
 };
@@ -120,7 +120,7 @@ export default function TeamManagementPage() {
           </div>
           <div>
             <label style={lbl}>Role / Title</label>
-            <input value={form.role} onChange={e => set('role', e.target.value)} placeholder="Lead Developer" style={inp} onFocus={focus} onBlur={blur} />
+            <input value={form.role} onChange={e => set('role', e.target.value)} placeholder="Admin" style={inp} onFocus={focus} onBlur={blur} />
           </div>
         </div>
 
