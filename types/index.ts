@@ -100,6 +100,27 @@ export interface PaperPublic {
   course_code: string;
 }
 
+export interface TeamMemberLink {
+  label: string;
+  url: string;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role?: string;
+  info?: string;
+  quote?: string;
+  avatar_url?: string;
+  linkedin_url?: string;
+  github_url?: string;
+  links: TeamMemberLink[];
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LeaderboardEntry {
   id: string;
   roll_number: string;
