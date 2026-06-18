@@ -29,6 +29,8 @@ export default function PapersPage() {
   const [viewer, setViewer] = useState<{ url:string; paper:any } | null>(null);
   const [busy, setBusy] = useState<string|null>(null);
   const [step, setStep] = useState<1|2|3|4>(1);
+  const [teacherSearch, setTeacherSearch] = useState("");
+  const [subjectsByTeacher, setSubjectsByTeacher] = useState<Record<string, any[]>>({});
 
   const handleRoll = async () => {
     const parsed = parseRoll(roll);
@@ -37,17 +39,29 @@ export default function PapersPage() {
     const { data: dRow } = await sb.from("departments").select("id").eq("code", parsed.code).eq("is_active", true).single();
     if (!dRow) return;
     const { data: t } = await sb.from("teachers").select("id,name,teacher_type").eq("department_id", dRow.id).eq("is_active", true).order("name");
-    setTeachers(t ?? []); setStep(2);
+    const teacherList = t ?? [];
+    setTeachers(teacherList); setTeacherSearch("");
+
+    // Preload all subjects for these teachers so students can also search by course code / title
+    const tIds = teacherList.map((x: any) => x.id);
+    const byTeacher: Record<string, any[]> = {};
+    if (tIds.length > 0) {
+      const { data: allSubs } = await sb.from("subjects")
+        .select("id,name,course_code,credits,teacher_id")
+        .in("teacher_id", tIds).eq("is_active", true).order("name");
+      (allSubs ?? []).forEach((s: any) => {
+        if (!byTeacher[s.teacher_id]) byTeacher[s.teacher_id] = [];
+        byTeacher[s.teacher_id].push(s);
+      });
+    }
+    setSubjectsByTeacher(byTeacher);
+    setStep(2);
   };
 
-  // Select a teacher -> show ONLY this teacher's subjects (no papers yet)
-  const handleTeacher = async (tid: string) => {
+  // Select a teacher -> show ONLY this teacher's subjects (preloaded; no papers yet)
+  const handleTeacher = (tid: string) => {
     setTeacherId(tid); setSubjectId(""); setPapers([]); setStep(3);
-    const { data: s } = await sb.from("subjects")
-      .select("id,name,course_code,credits")
-      .eq("teacher_id", tid).eq("is_active", true)
-      .order("name");
-    setSubjects(s ?? []);
+    setSubjects(subjectsByTeacher[tid] ?? []);
   };
 
   // Select a subject -> show ONLY this subject's papers
@@ -65,6 +79,7 @@ export default function PapersPage() {
   const reset = () => {
     setRoll(""); setDept(null); setTeachers([]); setTeacherId("");
     setSubjects([]); setSubjectId(""); setPapers([]); setStep(1);
+    setTeacherSearch(""); setSubjectsByTeacher({});
   };
 
   const handleView = async (paper: any) => {
@@ -87,6 +102,14 @@ export default function PapersPage() {
 
   const selectedSubject = subjects.find(s => s.id === subjectId);
   const selectedTeacher = teachers.find(t => t.id === teacherId);
+
+  const tq = teacherSearch.trim().toLowerCase();
+  const matchedSubjects = (tid: string) =>
+    (subjectsByTeacher[tid] ?? []).filter(s =>
+      s.course_code?.toLowerCase().includes(tq) || s.name?.toLowerCase().includes(tq));
+  const filteredTeachers = !tq ? teachers : teachers.filter(t =>
+    t.name.toLowerCase().includes(tq) || matchedSubjects(t.id).length > 0);
+
   const steps = [["1","Roll No."],["2","Teacher"],["3","Subject"],["4","Papers"]];
 
   return (
@@ -151,28 +174,73 @@ export default function PapersPage() {
       {/* Step 2 — Select Teacher */}
       {step >= 2 && (
         <div className="section-card fade-up-2">
-          <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#aaa", letterSpacing:"0.08em", marginBottom:14, textTransform:"uppercase" }}>Select Teacher</label>
+          <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#aaa", letterSpacing:"0.08em", marginBottom:12, textTransform:"uppercase" }}>Select Teacher</label>
+
           {teachers.length === 0 ? (
             <p style={{ fontSize:13, color:"#bbb" }}>No teachers found for your department.</p>
           ) : (
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {teachers.map(t => (
-                <button key={t.id} onClick={() => handleTeacher(t.id)}
-                  className={`chip ${teacherId === t.id ? "active" : ""}`}
-                  style={{ display:"inline-flex", alignItems:"center", gap:7 }}>
-                  {t.name}
-                  {t.teacher_type === "Visiting" && (
-                    <span style={{
-                      fontSize:10, fontWeight:800, padding:"1px 7px", borderRadius:999,
-                      background: teacherId === t.id ? "rgba(255,255,255,0.25)" : "#fff4e6",
-                      color: teacherId === t.id ? "#fff" : "#e8590c",
-                    }}>
-                      Visiting
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            <>
+              {/* Search across teacher name + course code/title */}
+              <div style={{ position:"relative", marginBottom:14 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}>
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                </svg>
+                <input value={teacherSearch} onChange={e => setTeacherSearch(e.target.value)}
+                  placeholder="Search by teacher name, course code, or title…"
+                  className="input-field" style={{ paddingLeft:38, paddingRight: teacherSearch ? 38 : 14 }} />
+                {teacherSearch && (
+                  <button onClick={() => setTeacherSearch("")} aria-label="Clear search"
+                    style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"#f0f0f0", border:"none", borderRadius:"50%", width:22, height:22, cursor:"pointer", color:"#888", fontSize:12, lineHeight:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {filteredTeachers.length === 0 ? (
+                <p style={{ fontSize:13, color:"#bbb", padding:"4px 2px" }}>
+                  No teacher or course matches “{teacherSearch}”.
+                </p>
+              ) : (
+                <>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8, maxHeight:300, overflowY:"auto", paddingRight:2 }}>
+                    {filteredTeachers.map(t => {
+                      const hits = tq ? matchedSubjects(t.id) : [];
+                      const byCourse = tq && !t.name.toLowerCase().includes(tq) && hits.length > 0;
+                      return (
+                        <button key={t.id} onClick={() => handleTeacher(t.id)}
+                          className={`chip ${teacherId === t.id ? "active" : ""}`}
+                          style={{ display:"inline-flex", alignItems:"center", gap:7 }}
+                          title={byCourse ? `Teaches ${hits.map(h => h.course_code).join(", ")}` : undefined}>
+                          {t.name}
+                          {t.teacher_type === "Visiting" && (
+                            <span style={{
+                              fontSize:10, fontWeight:800, padding:"1px 7px", borderRadius:999,
+                              background: teacherId === t.id ? "rgba(255,255,255,0.25)" : "#fff4e6",
+                              color: teacherId === t.id ? "#fff" : "#e8590c",
+                            }}>
+                              Visiting
+                            </span>
+                          )}
+                          {byCourse && (
+                            <span style={{
+                              fontSize:10, fontWeight:700, fontFamily:"monospace", padding:"1px 7px", borderRadius:999,
+                              background: teacherId === t.id ? "rgba(255,255,255,0.22)" : "#eef2ff",
+                              color: teacherId === t.id ? "#fff" : "#3b5bdb",
+                            }}>
+                              {hits[0].course_code}{hits.length > 1 ? ` +${hits.length - 1}` : ""}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p style={{ fontSize:11, color:"#bbb", marginTop:10 }}>
+                    {tq ? `${filteredTeachers.length} of ${teachers.length} teachers match` : `${teachers.length} teacher${teachers.length !== 1 ? "s" : ""} in ${dept?.code ?? "your department"}`}
+                  </p>
+                </>
+              )}
+            </>
           )}
         </div>
       )}
