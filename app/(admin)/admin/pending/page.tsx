@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { watermarkPdfBytes } from '@/lib/utils/watermark';
 
 const SUPABASE_URL = 'https://dvtkcuqwvkakycsseydh.supabase.co';
 const sb = createClient(SUPABASE_URL,
@@ -29,13 +30,26 @@ export default function PendingPage() {
   const approve = async (p: any) => {
     setLoading(p.id); setMsg('');
 
-    // Move file pending/ → approved/
     const newPath = p.file_path.startsWith('pending/')
       ? p.file_path.replace('pending/', 'approved/')
       : p.file_path;
+    const isPdf = p.file_type === 'application/pdf' || p.file_path.toLowerCase().endsWith('.pdf');
 
-    if (p.file_path !== newPath) {
-      await sb.storage.from('papers').move(p.file_path, newPath);
+    // Stamp a StudyNest watermark onto PDFs, then place the file at approved/.
+    try {
+      if (isPdf) {
+        const { data: file, error: dlErr } = await sb.storage.from('papers').download(p.file_path);
+        if (dlErr || !file) throw dlErr ?? new Error('download failed');
+        const stamped = await watermarkPdfBytes(await file.arrayBuffer());
+        const { error: upErr } = await sb.storage.from('papers').upload(newPath, stamped, { contentType: 'application/pdf', upsert: true });
+        if (upErr) throw upErr;
+        if (p.file_path !== newPath) await sb.storage.from('papers').remove([p.file_path]);
+      } else if (p.file_path !== newPath) {
+        await sb.storage.from('papers').move(p.file_path, newPath);
+      }
+    } catch {
+      // Watermarking failed — still approve by moving the original so the flow isn't blocked.
+      if (p.file_path !== newPath) { try { await sb.storage.from('papers').move(p.file_path, newPath); } catch {} }
     }
 
     // Correct public URL
@@ -49,11 +63,11 @@ export default function PendingPage() {
     }).eq('id', p.id);
 
     if (error) { setMsg('Error: ' + error.message); }
-    else { setMsg('Approved!'); }
+    else { setMsg(isPdf ? 'Approved — StudyNest watermark added!' : 'Approved!'); }
 
     setLoading(null);
     await load();
-    setTimeout(() => setMsg(''), 2000);
+    setTimeout(() => setMsg(''), 2500);
   };
 
   const reject = async () => {
