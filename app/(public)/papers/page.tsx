@@ -158,13 +158,42 @@ export default function PapersPage() {
   const steps = [["1","Roll No."],["2","Teacher"],["3","Subject"],["4","Papers"]];
 
   return (
-    <div style={{ maxWidth:940 }}>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+        .papers-bg {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          background:
+            radial-gradient(820px 460px at 8% -10%, rgba(124,92,250,0.22), transparent 60%),
+            radial-gradient(760px 460px at 100% 4%, rgba(56,189,248,0.16), transparent 55%),
+            radial-gradient(680px 460px at 50% 125%, rgba(236,72,153,0.10), transparent 60%),
+            linear-gradient(180deg, #f7f5ff 0%, #eef3ff 45%, #f6f8fd 100%);
+        }
+        .papers-page { position: relative; z-index: 1; }
+        .papers-page h1, .papers-page h3, .papers-page .paper-year {
+          font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+        }
+        .papers-page .section-card {
+          background: rgba(255,255,255,0.72) !important;
+          backdrop-filter: blur(16px) saturate(150%);
+          -webkit-backdrop-filter: blur(16px) saturate(150%);
+          border: 1px solid rgba(255,255,255,0.75) !important;
+          box-shadow: 0 12px 34px rgba(86,72,160,0.10) !important;
+          border-radius: 18px !important;
+        }
+        .papers-page .input-field { background: rgba(255,255,255,0.9); }
+      `}</style>
+
+      <div className="papers-bg" />
+
+      <div className="papers-page" style={{ maxWidth:940, margin:"0 auto" }}>
 
       {/* Hero */}
       <div className="fade-up" style={{
-        background:"linear-gradient(135deg,#667eea 0%,#764ba2 100%)",
-        borderRadius:20, padding:"40px 36px", marginBottom:28, color:"#fff",
+        background:"linear-gradient(130deg,#6a5cff 0%,#8b5cf6 48%,#a855f7 100%)",
+        borderRadius:22, padding:"44px 38px", marginBottom:24, color:"#fff",
         position:"relative", overflow:"hidden",
+        boxShadow:"0 22px 50px rgba(124,92,250,0.32)",
       }}>
         <div style={{ position:"absolute", top:-40, right:-40, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
         <div style={{ position:"absolute", bottom:-20, right:60, width:120, height:120, borderRadius:"50%", background:"rgba(255,255,255,0.04)" }} />
@@ -430,7 +459,7 @@ export default function PapersPage() {
                         </span>
                       </div>
 
-                      <div style={{ fontSize:30, fontWeight:800, color:"#111", lineHeight:1, letterSpacing:"-0.5px" }}>{p.year}</div>
+                      <div className="paper-year" style={{ fontSize:32, fontWeight:800, color:"#111", lineHeight:1, letterSpacing:"-0.5px" }}>{p.year}</div>
                       <div style={{ fontSize:13, color:"#888", marginTop:7, marginBottom:18, display:"flex", alignItems:"center", gap:8 }}>
                         <span style={{ fontWeight:600, color:"#555" }}>{p.term}</span>
                         <span style={{ width:3, height:3, borderRadius:"50%", background:"#ccc" }} />
@@ -487,6 +516,7 @@ export default function PapersPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
