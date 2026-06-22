@@ -19,6 +19,21 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     if (saved === "dark" || saved === "light") setTheme(saved);
   }, []);
 
+  // Anonymous visit tracking — counts are shown in the admin dashboard.
+  useEffect(() => {
+    let vid = "";
+    try {
+      vid = localStorage.getItem("sn-vid") || "";
+      if (!vid) { vid = crypto.randomUUID(); localStorage.setItem("sn-vid", vid); }
+    } catch {}
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitor_id: vid, path: pathname }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [pathname]);
+
   const toggleTheme = () => setTheme(t => {
     const next = t === "dark" ? "light" : "dark";
     try { localStorage.setItem("sn-theme", next); } catch {}
@@ -47,7 +62,8 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         .pub-shell[data-theme="dark"] { filter: invert(1) hue-rotate(180deg); }
         .pub-shell[data-theme="dark"] img,
         .pub-shell[data-theme="dark"] svg,
-        .pub-shell[data-theme="dark"] [style*="gradient"] { filter: invert(1) hue-rotate(180deg); }
+        .pub-shell[data-theme="dark"] [style*="gradient"],
+        .pub-shell[data-theme="dark"] [style*="url("] { filter: invert(1) hue-rotate(180deg); }
         .theme-toggle { width:36px; height:36px; border-radius:9px; border:1.5px solid #e0e0e0; background:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:#555; transition:background 0.15s, transform 0.15s; flex-shrink:0; }
         .theme-toggle:hover { background:#f5f5f5; transform:translateY(-1px); }
         @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
