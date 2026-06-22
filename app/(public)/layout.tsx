@@ -67,7 +67,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         transition: "all 0.25s",
         boxShadow: scrolled ? "0 2px 16px rgba(0,0,0,0.07)" : "none",
       }}>
-        <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 24px", display:"flex", alignItems:"center", justifyContent:"space-between", height:58 }}>
+        <div className="pub-nav-inner" style={{ maxWidth:1100, margin:"0 auto", padding:"0 24px", display:"flex", alignItems:"center", justifyContent:"space-between", height:58 }}>
           <Link href="/papers" style={{ textDecoration:"none", display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:32, height:32, borderRadius:9, background:"linear-gradient(135deg,#667eea,#764ba2)", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:900, fontSize:14, flexShrink:0 }}>S</div>
             <div>
@@ -75,7 +75,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               <span style={{ fontSize:12, color:"#bbb", marginLeft:6 }}>NTU</span>
             </div>
           </Link>
-          <div style={{ display:"flex", gap:4 }}>
+          <div className="pub-nav-links" style={{ display:"flex", gap:4 }}>
             {([
               ["/papers","Papers"],
               ["/contribute","Contribute"],
@@ -98,7 +98,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         </div>
       </nav>
 
-      <main style={{ maxWidth:1100, margin:"0 auto", padding:"40px 24px" }}>{children}</main>
+      <main className="pub-main" style={{ maxWidth:1100, margin:"0 auto", padding:"40px 24px" }}>{children}</main>
 
       <footer style={{ borderTop:"1px solid #e8e8e8", background:"#fff", padding:"24px", marginTop:60, textAlign:"center" }}>
         <div style={{ fontSize:13, color:"#bbb" }}>

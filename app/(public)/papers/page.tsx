@@ -170,7 +170,7 @@ export default function PapersPage() {
             <div key={num} style={{ display:"flex", alignItems:"center", gap:6 }}>
               <div style={{ display:"flex", alignItems:"center", gap:7 }}>
                 <div className={`step-dot ${done ? "done" : active ? "active" : "idle"}`}>{done ? "✓" : num}</div>
-                <span style={{ fontSize:13, fontWeight: active ? 700 : 400, color: active ? "#111" : done ? "#059669" : "#bbb" }}>{label}</span>
+                <span className="step-label" style={{ fontSize:13, fontWeight: active ? 700 : 400, color: active ? "#111" : done ? "#059669" : "#bbb" }}>{label}</span>
               </div>
               {i < steps.length - 1 && <div style={{ width:24, height:1.5, background: done ? "#059669" : "#e0e0e0", transition:"background 0.3s" }} />}
             </div>
