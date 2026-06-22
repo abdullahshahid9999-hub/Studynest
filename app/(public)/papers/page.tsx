@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@supabase/supabase-js";
 
 const sb = createClient(
@@ -464,8 +465,9 @@ export default function PapersPage() {
         )
       )}
 
-      {/* Fullscreen Viewer */}
-      {viewer && (
+      {/* Fullscreen Viewer (portaled to body so the dark-mode invert filter
+          on .pub-shell doesn't break its fixed positioning) */}
+      {viewer && createPortal((
         <div style={{ position:"fixed", inset:0, zIndex:9999, background:"#0f0f0f", display:"flex", flexDirection:"column", animation:"fadeIn 0.2s ease" }}>
           <div style={{ background:"#fff", padding:"10px 18px", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0, borderBottom:"1px solid #e8e8e8", gap:12 }}>
             <div style={{ minWidth:0, flex:1 }}>
@@ -487,7 +489,7 @@ export default function PapersPage() {
             )}
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }

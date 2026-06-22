@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 8);
@@ -13,8 +14,19 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("sn-theme");
+    if (saved === "dark" || saved === "light") setTheme(saved);
+  }, []);
+
+  const toggleTheme = () => setTheme(t => {
+    const next = t === "dark" ? "light" : "dark";
+    try { localStorage.setItem("sn-theme", next); } catch {}
+    return next;
+  });
+
   return (
-    <div className="pub-shell" style={{ minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="pub-shell" data-theme={theme} style={{ minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
@@ -30,6 +42,14 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         .pub-shell h1, .pub-shell h2, .pub-shell h3, .pub-shell .paper-year {
           font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
         }
+        /* Dark mode via inversion — keeps the inline-styled UI consistent.
+           Images, SVGs and gradients are counter-inverted so they stay true. */
+        .pub-shell[data-theme="dark"] { filter: invert(1) hue-rotate(180deg); }
+        .pub-shell[data-theme="dark"] img,
+        .pub-shell[data-theme="dark"] svg,
+        .pub-shell[data-theme="dark"] [style*="gradient"] { filter: invert(1) hue-rotate(180deg); }
+        .theme-toggle { width:36px; height:36px; border-radius:9px; border:1.5px solid #e0e0e0; background:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:#555; transition:background 0.15s, transform 0.15s; flex-shrink:0; }
+        .theme-toggle:hover { background:#f5f5f5; transform:translateY(-1px); }
         @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.04); } }
@@ -106,6 +126,13 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 </Link>
               );
             })}
+            <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+              {theme === "dark" ? (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+              ) : (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+              )}
+            </button>
           </div>
         </div>
       </nav>
