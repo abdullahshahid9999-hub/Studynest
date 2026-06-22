@@ -11,8 +11,24 @@ const DEPT_MAP: Record<string,string> = {
   EE:'Electrical Engineering', CHE:'Chemical Engineering', ENV:'Environmental Sciences',
 };
 
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+const EXT_BY_MIME: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+};
+
+// Validate real file content (magic bytes) against the declared MIME type.
+// Defeats renamed files / polyglots (e.g. an HTML or script renamed to .pdf).
+function contentMatchesType(b: Uint8Array, mime: string): boolean {
+  const is = (...sig: number[]) => sig.every((v, i) => b[i] === v);
+  if (mime === 'application/pdf') return is(0x25, 0x50, 0x44, 0x46);                       // %PDF
+  if (mime === 'image/png') return is(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);     // PNG
+  if (mime === 'image/jpeg' || mime === 'image/jpg') return is(0xFF, 0xD8, 0xFF);          // JPEG
+  if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')  // DOCX (zip)
+    return b[0] === 0x50 && b[1] === 0x4B && (b[2] === 0x03 || b[2] === 0x05 || b[2] === 0x07);
+  return false;
 }
 
 function parseDept(roll: string) {
@@ -72,9 +88,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'This paper already exists. For corrections or disputes, please contact administration.' }, { status: 409 });
   }
 
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
-  const storagePath = `pending/${genId()}.${ext}`;
+  // Verify the bytes actually match the declared type before storing.
   const buffer = await file.arrayBuffer();
+  const head = new Uint8Array(buffer.slice(0, 16));
+  if (!contentMatchesType(head, file.type)) {
+    return NextResponse.json({ success: false, error: 'File content does not match its declared type.' }, { status: 400 });
+  }
+
+  const safeExt = EXT_BY_MIME[file.type] ?? 'bin';
+  const storagePath = `pending/${crypto.randomUUID()}.${safeExt}`;
 
   const { error: uploadErr } = await sb.storage.from('papers').upload(storagePath, buffer, { contentType: file.type, upsert: false });
   if (uploadErr) {
@@ -89,7 +111,7 @@ export async function POST(request: NextRequest) {
   const { data: paper, error: paperErr } = await sb.from('papers').insert({
     department_id: dept.id, teacher_id: teacherId, subject_id: subjectId,
     contributor_id: contrib?.id ?? null, exam_type: examType, semester, term, year,
-    file_path: storagePath, file_name: file.name, file_type: file.type, file_size: file.size,
+    file_path: storagePath, file_name: file.name.replace(/[^\w.\- ]+/g, '_').slice(0, 120), file_type: file.type, file_size: file.size,
     roll_number: roll, upload_ip: ip, status: 'Pending',
   }).select('id').single();
 

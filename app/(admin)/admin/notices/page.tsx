@@ -103,7 +103,7 @@ export default function NoticesPage() {
       <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111', marginBottom: 4 }}>Notices</h1>
       <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
         Post announcements for students. Active notices appear on the public
-        <a href="/notices" target="_blank" style={{ color: '#3b5bdb', textDecoration: 'none', fontWeight: 600 }}> Notices</a> page.
+        <a href="/notices" target="_blank" rel="noopener noreferrer" style={{ color: '#3b5bdb', textDecoration: 'none', fontWeight: 600 }}> Notices</a> page.
       </p>
 
       {/* Form */}

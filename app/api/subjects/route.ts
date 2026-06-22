@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (teacherId) query = query.eq('teacher_id', teacherId);
 
   const { data, error } = await query.order('name');
-  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ success: false, error: 'Server error. Please try again.' }, { status: 500 });
   return NextResponse.json({ success: true, data: data ?? [] });
 }
 
@@ -51,6 +51,6 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ success: false, error: 'Server error. Please try again.' }, { status: 500 });
   return NextResponse.json({ success: true, data });
 }
