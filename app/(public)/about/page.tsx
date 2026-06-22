@@ -32,15 +32,24 @@ function IconLink() {
 
 export default function AboutPage() {
   const [members, setMembers] = useState<any[]>([]);
+  const [contact, setContact] = useState<any>(null);
+  const [meet, setMeet] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    sb.from("team_members")
-      .select("*")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true })
-      .order("created_at", { ascending: true })
-      .then(({ data }) => { setMembers(data ?? []); setLoading(false); });
+    (async () => {
+      const [{ data: m }, { data: c }, { data: mc }] = await Promise.all([
+        sb.from("team_members").select("*").eq("is_active", true)
+          .order("display_order", { ascending: true }).order("created_at", { ascending: true }),
+        sb.from("contact_settings").select("*").eq("id", 1).maybeSingle(),
+        sb.from("meeting_contacts").select("*").eq("is_active", true)
+          .order("display_order", { ascending: true }).order("created_at", { ascending: true }),
+      ]);
+      setMembers(m ?? []);
+      setContact(c ?? null);
+      setMeet(mc ?? []);
+      setLoading(false);
+    })();
   }, []);
 
   return (
@@ -146,6 +155,75 @@ export default function AboutPage() {
           ))}
         </div>
       )}
+
+      {/* Contact Us */}
+      <div className="fade-up" style={{ marginTop: 44 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111", letterSpacing: "-0.4px", marginBottom: 6 }}>Contact Us</h2>
+        <p style={{ fontSize: 14, color: "#666", marginBottom: 20, maxWidth: 560, lineHeight: 1.6 }}>
+          {contact?.intro || "Want to collaborate, contribute, or just share an idea? We'd love to hear from you."}
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: meet.length > 0 ? "repeat(auto-fit,minmax(280px,1fr))" : "1fr", gap: 18, marginBottom: 20 }}>
+          {/* Email */}
+          <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 22, marginBottom: 10 }}>✉️</div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111", marginBottom: 6 }}>Reach out by email</h3>
+            <p style={{ fontSize: 13.5, color: "#666", lineHeight: 1.6, marginBottom: 16 }}>
+              For collaborations, ideas, corrections, or anything StudyNest — drop us a line.
+            </p>
+            {contact?.contact_email ? (
+              <>
+                <a href={`mailto:${contact.contact_email}`} style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "10px 18px", borderRadius: 10, fontSize: 14, fontWeight: 700,
+                  textDecoration: "none", color: "#fff",
+                  background: "linear-gradient(135deg,#667eea,#764ba2)",
+                }}>
+                  Email us →
+                </a>
+                <div style={{ fontSize: 12, color: "#999", marginTop: 10, fontFamily: "monospace" }}>{contact.contact_email}</div>
+              </>
+            ) : (
+              <span style={{ fontSize: 13, color: "#aaa" }}>Email coming soon.</span>
+            )}
+          </div>
+
+          {/* Meet on campus */}
+          {meet.length > 0 && (
+            <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 16, padding: 24 }}>
+              <div style={{ fontSize: 22, marginBottom: 10 }}>🎓</div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111", marginBottom: 6 }}>Meet us on campus</h3>
+              <p style={{ fontSize: 13.5, color: "#666", lineHeight: 1.6, marginBottom: 14 }}>
+                An NTU student and want to meet in person? You&apos;ll find us here:
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {meet.map(c => (
+                  <div key={c.id} style={{ borderLeft: "3px solid #e0d8f5", paddingLeft: 12 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#111" }}>{c.name}</div>
+                    <div style={{ fontSize: 12.5, color: "#777" }}>
+                      {[c.department, c.section && `Section ${c.section}`, c.semester && `Semester ${c.semester}`].filter(Boolean).join(" · ")}
+                    </div>
+                    {c.availability && <div style={{ fontSize: 12.5, color: "#9a6dd7", marginTop: 2 }}>{c.availability}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Funny open-source note */}
+        <div style={{
+          background: "#fffaf0", border: "1px dashed #f0c36d", borderRadius: 14,
+          padding: "16px 20px", display: "flex", gap: 12, alignItems: "flex-start",
+        }}>
+          <div style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>🔓</div>
+          <div style={{ fontSize: 13, color: "#7a5d14", lineHeight: 1.65 }}>
+            <b>Fun fact:</b> StudyNest is a proudly <b>open-source</b> project… with a strictly <b>private repository</b>.
+            Open in spirit, locked in practice — a bit like the library during finals week. 😄 (Feel free to star
+            the repo. You can&apos;t, but the thought counts.)
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

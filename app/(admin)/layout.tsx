@@ -17,6 +17,7 @@ const nav = [
   { label: 'Leaderboard',  href: '/admin/leaderboard' },
   { label: 'Notices',      href: '/admin/notices' },
   { label: 'Admin Management', href: '/admin/team' },
+  { label: 'Contact Us',   href: '/admin/contact' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -122,6 +122,27 @@ export interface TeamMember {
   updated_at: string;
 }
 
+export interface ContactSettings {
+  id: number;
+  contact_email?: string;
+  intro?: string;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface MeetingContact {
+  id: string;
+  name: string;
+  section?: string;
+  semester?: string;
+  department?: string;
+  availability?: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Notice {
   id: string;
   title: string;
